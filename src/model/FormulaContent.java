@@ -102,6 +102,7 @@ public class FormulaContent implements Content {
                         Character.isLetter(expression.charAt(i)) ||
                         expression.charAt(i) == ':' ||  // For ranges (e.g., A1:B2)
                         expression.charAt(i) == ',' || // For function arguments
+                        expression.charAt(i) == ';' || // For function arguments
                         expression.charAt(i) == '(' || // Handle opening parentheses for functions
                         expression.charAt(i) == ')')) { // Handle closing parentheses for functions
                     sb.append(expression.charAt(i));
@@ -185,9 +186,12 @@ public class FormulaContent implements Content {
 
         List<Double> values = getValuesFromArguments(arguments, cells);
      //   System.out.println("Values for function " + token + ": " + values);
+        //System.out.println("Anik Evaluating function token: " + token);
+
 
         if (token.startsWith("SUMA")) {
-          //  System.out.println("come to suma");
+            //System.out.println("hello Evaluating function token: " + token);
+
             return values.stream().mapToDouble(Double::doubleValue).sum();
         } else if (token.startsWith("MIN")) {
             return values.stream().mapToDouble(Double::doubleValue).min().orElseThrow(() -> new Exception("No values for MIN"));
@@ -200,10 +204,9 @@ public class FormulaContent implements Content {
         throw new Exception("Unknown function: " + token);
     }
 
-    // Helper to get values from function arguments
     private List<Double> getValuesFromArguments(String arguments, Map<String, Cell> cells) throws Exception {
         List<Double> values = new ArrayList<>();
-        String[] parts = arguments.split(",");
+        String[] parts = arguments.split("[,;]"); // Split by commas or semicolons
 
         for (String part : parts) {
             part = part.trim();
@@ -213,7 +216,7 @@ public class FormulaContent implements Content {
                 // Handle ranges (e.g., A1:B2)
                 values.addAll(getValuesFromRange(part, cells));
             } else {
-                values.add(Double.parseDouble(part));
+                values.add(Double.parseDouble(part)); // Handle numeric literals
             }
         }
         return values;
@@ -223,12 +226,30 @@ public class FormulaContent implements Content {
     private List<Double> getValuesFromRange(String range, Map<String, Cell> cells) throws Exception {
         List<Double> values = new ArrayList<>();
 
-        // First, check if the range is a simple comma-separated list of numbers
+        // Check if the range is a list of cell references separated by semicolons
+        if (range.contains(";")) {
+            String[] cellRefs = range.split(";");
+            for (String numStr : cellRefs) {
+                values.add(Double.parseDouble(numStr.trim())); // Parse each number
+            }
+            return values;
+
+//            for (String cellRef : cellRefs) {
+//                cellRef = cellRef.trim();
+//                if (cells.containsKey(cellRef)) {
+//                    values.add(cells.get(cellRef).getValueAsNumber());
+//                } else {
+//                    throw new Exception("Invalid cell reference: " + cellRef);
+//                }
+//            }
+//            return values;
+        }
+
+        // Check if the range is a comma-separated list of numbers
         if (range.contains(",")) {
-            // Split by commas and treat each as an individual number
             String[] numStrings = range.split(",");
             for (String numStr : numStrings) {
-                values.add(Double.parseDouble(numStr.trim()));  // Parse each number
+                values.add(Double.parseDouble(numStr.trim())); // Parse each number
             }
             return values;
         }
@@ -270,6 +291,7 @@ public class FormulaContent implements Content {
     }
 
     // Helper method to extract row from cell reference (e.g., A1 -> 1)
+// Helper method to extract row number from a cell reference (e.g., A1 -> 1)
     private int getRowFromCell(String cellRef) {
         StringBuilder rowBuilder = new StringBuilder();
         for (char ch : cellRef.toCharArray()) {
@@ -280,7 +302,7 @@ public class FormulaContent implements Content {
         return Integer.parseInt(rowBuilder.toString());
     }
 
-    // Helper method to extract column from cell reference (e.g., A1 -> A)
+    // Helper method to extract column number from a cell reference (e.g., A1 -> 1 for column A)
     private int getColFromCell(String cellRef) {
         StringBuilder colBuilder = new StringBuilder();
         for (char ch : cellRef.toCharArray()) {
@@ -289,14 +311,13 @@ public class FormulaContent implements Content {
             }
         }
 
-        // Convert the column letters to a number (e.g., A -> 1, B -> 2)
+        // Convert column letters to a number (e.g., A -> 1, B -> 2, AA -> 27)
         int colNum = 0;
         for (char ch : colBuilder.toString().toUpperCase().toCharArray()) {
             colNum = colNum * 26 + (ch - 'A' + 1);
         }
         return colNum;
     }
-
     // Dummy method to check if a cell reference is within a range (needs proper implementation)
     private boolean isInRange(String cellRef, String start, String end) {
         // Implement actual logic to determine if cellRef is within the start and end bounds
