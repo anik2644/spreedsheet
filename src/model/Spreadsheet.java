@@ -23,17 +23,83 @@ public class Spreadsheet {
      * @param content    The content to set in the cell.
      */
     public void addOrModifyCell(String coordinate, Content content) {
+        // Convert coordinate to uppercase to handle case insensitivity
+        coordinate = coordinate.toUpperCase();
+
+        if (content instanceof FormulaContent) {
+            FormulaContent formulaContent = (FormulaContent) content;
+
+            // Check for circular dependency before adding the cell
+            if (hasCircularDependency(coordinate, formulaContent)) {
+                System.out.println("Circular dependency detected! Cannot add this formula to cell " + coordinate);
+                return;
+            }
+
+            // Update cell content and dependencies
+            updateDependencies(coordinate, formulaContent);
+        }
+
         Cell cell = cells.getOrDefault(coordinate, new Cell(coordinate));
         cell.setContent(content);
         cells.put(coordinate, cell);
 
-        // Update dependencies if the content is a formula
-        if (content instanceof FormulaContent) {
-            updateDependencies(coordinate, (FormulaContent) content);
-        }
-
         // Recalculate values of the current cell and its dependents
         recalculateCellAndDependents(coordinate);
+    }
+
+    /**
+     * Checks for a circular dependency if adding the given formula to the specified cell.
+     *
+     * @param coordinate     The cell coordinate where the formula is being added.
+     * @param formulaContent The formula content to check.
+     * @return true if a circular dependency is detected, false otherwise.
+     */
+    public boolean hasCircularDependency(String coordinate, FormulaContent formulaContent) {
+        // Temporarily add the new dependencies for the check
+        Set<String> referencedCells = extractCellReferences(formulaContent);
+        updateDependencies(coordinate, formulaContent);
+
+        // Perform DFS to detect cycles starting from this cell
+        Set<String> visited = new HashSet<>();
+        Set<String> stack = new HashSet<>();
+
+        boolean hasCycle = detectCycle(coordinate, visited, stack);
+
+        // Revert the temporary update to the dependency tree
+        dependencies.values().forEach(dependents -> dependents.remove(coordinate));
+
+        return hasCycle;
+    }
+
+    /**
+     * Helper method to perform DFS and detect cycles in the dependency tree.
+     *
+     * @param node    The current cell being visited.
+     * @param visited Set of visited cells.
+     * @param stack   Set of cells in the current DFS path (to detect cycles).
+     * @return true if a cycle is detected, false otherwise.
+     */
+    private boolean detectCycle(String node, Set<String> visited, Set<String> stack) {
+        if (stack.contains(node)) {
+            return true; // Cycle detected
+        }
+
+        if (visited.contains(node)) {
+            return false; // Already processed this node
+        }
+
+        visited.add(node);
+        stack.add(node);
+
+        Set<String> dependents = dependencies.getOrDefault(node, Collections.emptySet());
+        for (String dependent : dependents) {
+            if (detectCycle(dependent, visited, stack)) {
+                return true;
+            }
+        }
+
+        stack.remove(node);
+        return false;
     }
 
     /**
@@ -46,7 +112,6 @@ public class Spreadsheet {
         return cells.get(coordinate);
     }
 
-
     /**
      * Returns the map of all cells in the spreadsheet.
      *
@@ -55,6 +120,7 @@ public class Spreadsheet {
     public Map<String, Cell> getCells() {
         return cells;
     }
+
     /**
      * Recalculates the specified cell and any cells that depend on it.
      *
@@ -90,7 +156,7 @@ public class Spreadsheet {
     /**
      * Updates the dependency graph for a cell with a formula.
      *
-     * @param coordinate The cell coordinate.
+     * @param coordinate     The cell coordinate.
      * @param formulaContent The formula content.
      */
     private void updateDependencies(String coordinate, FormulaContent formulaContent) {
@@ -129,10 +195,47 @@ public class Spreadsheet {
     /**
      * Prints the entire spreadsheet with cell coordinates and their values.
      */
+    /**
+     * Displays the spreadsheet in a tabular format with rows and columns.
+     */
     public void displaySpreadsheet() {
+        // Determine the maximum row and column dynamically based on the current cell keys
+        int maxRow = 0;
+        char maxCol = 'A';
+
         for (String coordinate : cells.keySet()) {
-            Cell cell = cells.get(coordinate);
-            System.out.println(coordinate + ": " + cell.getValueAsString());
+            String colPart = coordinate.replaceAll("\\d", ""); // Extract letters (column part)
+            int rowPart = Integer.parseInt(coordinate.replaceAll("\\D", "")); // Extract numbers (row part)
+
+            if (rowPart > maxRow) {
+                maxRow = rowPart;
+            }
+            if (colPart.compareTo(String.valueOf(maxCol)) > 0) {
+                maxCol = colPart.charAt(0);
+            }
+        }
+
+        // Print the header row (column labels)
+        System.out.print("    ");
+        for (char col = 'A'; col <= maxCol; col++) {
+            System.out.print(String.format("%-10s", col));
+        }
+        System.out.println();
+
+        // Print each row with its row label and cell values
+        for (int row = 1; row <= maxRow; row++) {
+            System.out.print(String.format("%-4d", row));
+
+            for (char col = 'A'; col <= maxCol; col++) {
+                String coordinate = "" + col + row;
+                Cell cell = cells.get(coordinate);
+
+                // Print cell value or empty string if cell is not defined
+                String value = (cell != null) ? cell.getValueAsString() : "";
+                System.out.print(String.format("%-10s", value));
+            }
+            System.out.println();
         }
     }
+
 }

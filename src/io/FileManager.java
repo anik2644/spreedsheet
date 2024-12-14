@@ -16,6 +16,9 @@ public class FileManager {
      * @param spreadsheet The spreadsheet to save.
      * @throws IOException If an I/O error occurs.
      */
+
+
+/*
     public void saveSpreadsheet(String filePath, Spreadsheet spreadsheet) throws IOException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
             Map<String, Cell> cells = spreadsheet.getCells();
@@ -43,7 +46,7 @@ public class FileManager {
             }
         }
     }
-
+*/
     /**
      * Loads a spreadsheet from an S2V file.
      *
@@ -51,6 +54,69 @@ public class FileManager {
      * @return A populated Spreadsheet object.
      * @throws IOException If an I/O error occurs.
      */
+
+    public void saveSpreadsheet(String filePath, Spreadsheet spreadsheet) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            Map<String, Cell> cells = spreadsheet.getCells();
+
+            // Determine the maximum row and column used
+            int maxRow = 0;
+            int maxCol = 0;
+            for (String coordinate : cells.keySet()) {
+                int row = getRowNumber(coordinate);
+                int col = columnNameToIndex(getColumnPart(coordinate));
+                maxRow = Math.max(maxRow, row);
+                maxCol = Math.max(maxCol, col);
+            }
+
+            // Write each row
+            for (int row = 1; row <= maxRow; row++) {
+                List<String> rowContents = new ArrayList<>();
+                for (int col = 0; col <= maxCol; col++) {
+                    String coordinate = getCellCoordinate(col, row);
+                    Cell cell = cells.get(coordinate);
+
+                    if (cell != null && cell.getContent() != null) {
+                        String content;
+                        Content cellContent = cell.getContent();
+
+                        // If the content is a formula, store the formula string itself
+                        if (cellContent instanceof FormulaContent) {
+                            content = ((FormulaContent) cellContent).getFormula();
+                        } else {
+                            content = cellContent.getValueAsString();
+                        }
+
+                        // Escape content for file (convert ";" in functions to ",")
+                        content = escapeContentForFile(content);
+                        rowContents.add(content);
+                    } else {
+                        rowContents.add(""); // Empty cell
+                    }
+                }
+
+                // Join the row contents with semicolons
+                writer.write(String.join(";", rowContents));
+                writer.newLine();
+            }
+        }
+    }
+
+    /**
+     * Converts a column name (e.g., "A", "B", "AA") to a zero-based column index.
+     *
+     * @param columnName The column name.
+     * @return The zero-based column index.
+     */
+    private int columnNameToIndex(String columnName) {
+        int index = 0;
+        for (char ch : columnName.toCharArray()) {
+            index = index * 26 + (ch - 'A' + 1);
+        }
+        return index - 1; // Convert to zero-based index
+    }
+
+
     public Spreadsheet loadSpreadsheet(String filePath) throws IOException {
         Spreadsheet spreadsheet = new Spreadsheet();
 
@@ -59,21 +125,39 @@ public class FileManager {
             int rowNumber = 1;
 
             while ((line = reader.readLine()) != null) {
+                // Split line by semicolons
                 String[] contents = line.split(";");
+
+                // Process each cell in the row
                 for (int colIndex = 0; colIndex < contents.length; colIndex++) {
                     String content = unescapeContentFromFile(contents[colIndex]);
+
+                    // If the content is not empty, process it
                     if (!content.isEmpty()) {
                         String coordinate = getCellCoordinate(colIndex, rowNumber);
-                        Content cellContent = parseContent(content);
+
+                        Content cellContent;
+                        if (content.startsWith("=")) {
+                            // If the content starts with '=', it is a formula
+                            cellContent = new FormulaContent(content);
+                        } else {
+                            // Otherwise, it could be a numeric or text content
+                            cellContent = parseContent(content);
+                        }
+
+                        // Add the parsed content to the spreadsheet
                         spreadsheet.addOrModifyCell(coordinate, cellContent);
                     }
                 }
+
+                // Increment the row number
                 rowNumber++;
             }
         }
 
         return spreadsheet;
     }
+
 
     /**
      * Converts a file-safe content back into a standard content format.

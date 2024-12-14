@@ -61,19 +61,61 @@ public class Menu {
         }
     }
 
+    private boolean isValidCoordinate(String coordinate) {
+        // Regular expression to match cell coordinates like A1, B2, AA10, etc.
+        return coordinate.matches("[A-Z]+\\d+");
+    }
+
+    private boolean isValidFormula(String formula) {
+        // Extract all potential cell references in the formula
+        String[] tokens = formula.substring(1).split("[^A-Z0-9]+");
+        for (String token : tokens) {
+            if (!token.isEmpty() && !isValidCoordinate(token)) {
+                return false;
+            }
+        }
+        return true;
+    }
     /**
      * Adds or modifies a cell in the spreadsheet.
      */
     private void addOrModifyCell() {
-        System.out.print("Enter cell coordinate (e.g., A1): ");
-        String coordinate = scanner.nextLine().toUpperCase();
+        String coordinate;
+        while (true) {
+            System.out.print("Enter cell coordinate (e.g., A1): ");
+            coordinate = scanner.nextLine().toUpperCase().trim();
+
+            // Validate the coordinate using a regular expression
+            if (isValidCoordinate(coordinate)) {
+                break;
+            } else {
+                System.out.println("Invalid cell coordinate format! Please enter a valid coordinate (e.g., A1, B2, AA10).");
+            }
+        }
+
 
         System.out.print("Enter cell content (text, number, or formula starting with '='): ");
         String contentInput = scanner.nextLine();
 
         Content content;
         if (contentInput.startsWith("=")) {
-            content = new FormulaContent(contentInput);
+            // Convert any lowercase cell references to uppercase in the formula
+            contentInput = contentInput.toUpperCase();
+
+            // Validate the formula
+            if (!isValidFormula(contentInput)) {
+                System.out.println("Invalid formula syntax! Please ensure the formula contains valid cell coordinates.");
+                return;
+            }
+
+            // Check for circular dependencies before adding the formula
+            FormulaContent formulaContent = new FormulaContent(contentInput);
+            if (spreadsheet.hasCircularDependency(coordinate, formulaContent)) {
+                System.out.println("Circular dependency detected! Cannot add this formula.");
+                return;
+            }
+
+            content = formulaContent;
         } else {
             try {
                 content = new NumericContent(Double.parseDouble(contentInput));
@@ -98,8 +140,9 @@ public class Menu {
      * Saves the spreadsheet to a file.
      */
     private void saveSpreadsheet() {
-        System.out.print("Enter file path to save the spreadsheet (e.g., spreadsheet.s2v): ");
-        String filePath = scanner.nextLine();
+//        System.out.print("Enter file path to save the spreadsheet (e.g., spreadsheet.s2v): ");
+//        String filePath = scanner.nextLine();
+        String filePath = "src/spreedshet.s2v";
 
         try {
             fileManager.saveSpreadsheet(filePath, spreadsheet);
@@ -113,9 +156,9 @@ public class Menu {
      * Loads a spreadsheet from a file.
      */
     private void loadSpreadsheet() {
-        System.out.print("Enter file path to load the spreadsheet (e.g., spreadsheet.s2v): ");
-        String filePath = scanner.nextLine();
-
+//        System.out.print("Enter file path to load the spreadsheet (e.g., spreadsheet.s2v): ");
+//        String filePath = scanner.nextLine();
+        String filePath = "src/spreedshet.s2v";
         try {
             this.spreadsheet = fileManager.loadSpreadsheet(filePath);
             System.out.println("Spreadsheet loaded successfully from " + filePath);

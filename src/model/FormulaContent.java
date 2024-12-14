@@ -63,4 +63,8 @@ public class FormulaContent implements Content {
     public String toString() {
         return formula;
     }
+
+    public String getFormula() {
+        return  formula;
+    }
 }
