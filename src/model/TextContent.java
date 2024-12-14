@@ -1,12 +1,10 @@
 package model;
 
-/**
- * Represents text-based content in a cell.
- */
+
 public class TextContent implements Content {
     private String value;
 
-    // Constructor
+
     public TextContent(String value) {
         this.value = value;
     }

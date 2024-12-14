@@ -67,34 +67,33 @@ public class Menu {
     }
 
     private boolean isValidFormula(String formula) {
-        // Ensure the formula starts with '='
         if (!formula.startsWith("=")) {
+            // System.out.println("Formula does not start with '='.");
             return false;
         }
 
-        // Remove the leading '=' for validation purposes
         formula = formula.substring(1).trim();
 
-        // Regex to match cell references (e.g., A1, B2, AA10)
         String cellRef = "[A-Z]+\\d+";
 
-        // Regex to match ranges (e.g., A1:B3)
         String cellRange = cellRef + ":" + cellRef;
 
-        // Regex to match numbers (e.g., 10, 3.5)
         String number = "\\d+(\\.\\d+)?";
 
-        // Regex to match aggregate functions with arguments (e.g., SUMA(A1:B3;C1;3))
         String function = "(SUMA|MIN|MAX|PROMEDIO)\\(([^()]*)\\)";
 
-        // Combine all valid tokens (functions, ranges, cell references, numbers)
         String validToken = String.format("(%s|%s|%s|%s)", function, cellRange, cellRef, number);
 
-        // Full regex to validate the entire formula with operators and parentheses
         String formulaRegex = String.format("^(%s|[+\\-*/();\\s])+?$", validToken);
 
-        // Check if the formula matches the full regex pattern
-        return formula.matches(formulaRegex);
+        // System.out.println("Validating formula: " + formula);
+        // System.out.println("Regex used: " + formulaRegex);
+
+        boolean result = formula.matches(formulaRegex);
+
+        // System.out.println("Validation result: " + result);
+
+        return result;
     }
 
     /**
@@ -106,7 +105,7 @@ public class Menu {
             System.out.print("Enter cell coordinate (e.g., A1): ");
             coordinate = scanner.nextLine().toUpperCase().trim();
 
-            // Validate the coordinate using a regular expression
+
             if (isValidCoordinate(coordinate)) {
                 break;
             } else {
@@ -120,16 +119,16 @@ public class Menu {
 
         Content content;
         if (contentInput.startsWith("=")) {
-            // Convert any lowercase cell references to uppercase in the formula
+
             contentInput = contentInput.toUpperCase();
 
-            // Validate the formula
+
             if (!isValidFormula(contentInput)) {
                 System.out.println("Invalid formula syntax! Please ensure the formula contains valid cell coordinates.");
                 return;
             }
 
-            // Check for circular dependencies before adding the formula
+
             FormulaContent formulaContent = new FormulaContent(contentInput);
             if (spreadsheet.hasCircularDependency(coordinate, formulaContent)) {
                 System.out.println("Circular dependency detected! Cannot add this formula.");
@@ -149,17 +148,13 @@ public class Menu {
         System.out.println("Cell " + coordinate + " updated successfully.");
     }
 
-    /**
-     * Displays the entire spreadsheet.
-     */
+
     private void displaySpreadsheet() {
         System.out.println("\nCurrent Spreadsheet:");
         spreadsheet.displaySpreadsheet();
     }
 
-    /**
-     * Saves the spreadsheet to a file.
-     */
+
     private void saveSpreadsheet() {
 //        System.out.print("Enter file path to save the spreadsheet (e.g., spreadsheet.s2v): ");
 //        String filePath = scanner.nextLine();
@@ -173,9 +168,7 @@ public class Menu {
         }
     }
 
-    /**
-     * Loads a spreadsheet from a file.
-     */
+
     private void loadSpreadsheet() {
 //        System.out.print("Enter file path to load the spreadsheet (e.g., spreadsheet.s2v): ");
 //        String filePath = scanner.nextLine();

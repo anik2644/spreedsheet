@@ -12,15 +12,7 @@ public class FunctionEvaluator {
         this.spreadsheet = spreadsheet;
     }
 
-    /**
-     * Evaluates a function expression and returns the result.
-     *
-     * @param expression The function expression (e.g., "SUMA(A1:B3;C1;3)").
-     * @return The computed result as a double.
-     * @throws IllegalArgumentException if the function is unknown or arguments are invalid.
-     */
     public double evaluateFunction(String expression) {
-        // Match function name and arguments
         Pattern pattern = Pattern.compile("(\\w+)\\((.*)\\)");
         Matcher matcher = pattern.matcher(expression);
 
@@ -50,12 +42,6 @@ public class FunctionEvaluator {
         }
     }
 
-    /**
-     * Parses the arguments of a function and returns a list of numerical values.
-     *
-     * @param arguments The arguments string (e.g., "A1:B3;C1;3").
-     * @return A list of doubles representing the evaluated arguments.
-     */
     private List<Double> parseArguments(String arguments) {
         List<String> args = Arrays.asList(arguments.split(";"));
         List<Double> values = new ArrayList<>();
@@ -63,16 +49,12 @@ public class FunctionEvaluator {
         for (String arg : args) {
             arg = arg.trim();
             if (arg.matches("\\d+(\\.\\d+)?")) {
-                // Numerical value
                 values.add(Double.parseDouble(arg));
             } else if (arg.matches("[A-Z]+\\d+:[A-Z]+\\d+")) {
-                // Range (e.g., A1:B3)
                 values.addAll(getValuesFromRange(arg));
             } else if (arg.matches("[A-Z]+\\d+")) {
-                // Individual cell (e.g., A1)
                 values.add(getValueFromCell(arg));
             } else if (arg.matches("\\w+\\(.*\\)")) {
-                // Nested function
                 values.add(evaluateFunction(arg));
             } else {
                 throw new IllegalArgumentException("Invalid argument: " + arg);
@@ -82,12 +64,6 @@ public class FunctionEvaluator {
         return values;
     }
 
-    /**
-     * Retrieves the values from a range (e.g., "A1:B3").
-     *
-     * @param range The range string.
-     * @return A list of doubles representing the values in the range.
-     */
     private List<Double> getValuesFromRange(String range) {
         String[] parts = range.split(":");
         String startCell = parts[0];
@@ -110,16 +86,10 @@ public class FunctionEvaluator {
         return values;
     }
 
-    /**
-     * Retrieves the value of an individual cell.
-     *
-     * @param coordinate The cell coordinate (e.g., "A1").
-     * @return The cell's numeric value.
-     */
     private Double getValueFromCell(String coordinate) {
         Cell cell = spreadsheet.getCells().get(coordinate);
         if (cell == null || cell.getContent() == null) {
-            return 0.0; // Treat empty cells as 0
+            return 0.0;
         }
 
         Content content = cell.getContent();
@@ -132,23 +102,14 @@ public class FunctionEvaluator {
         }
     }
 
-    /**
-     * Converts a cell coordinate to a zero-based column index (e.g., "B" -> 1).
-     */
     private int getColumnIndex(String coordinate) {
         return columnNameToIndex(coordinate.replaceAll("\\d+", ""));
     }
 
-    /**
-     * Extracts the row number from a cell coordinate (e.g., "A1" -> 1).
-     */
     private int getRowNumber(String coordinate) {
         return Integer.parseInt(coordinate.replaceAll("[A-Z]+", ""));
     }
 
-    /**
-     * Converts a column letter (e.g., "A") to a zero-based index.
-     */
     private int columnNameToIndex(String columnName) {
         int index = 0;
         for (char ch : columnName.toCharArray()) {
@@ -157,16 +118,10 @@ public class FunctionEvaluator {
         return index - 1;
     }
 
-    /**
-     * Generates a cell coordinate (e.g., col=1, row=2 -> "B2").
-     */
     private String getCellCoordinate(int col, int row) {
         return getColumnName(col) + row;
     }
 
-    /**
-     * Converts a zero-based column index to a column name (e.g., 1 -> "B").
-     */
     private String getColumnName(int colIndex) {
         StringBuilder columnName = new StringBuilder();
         while (colIndex >= 0) {

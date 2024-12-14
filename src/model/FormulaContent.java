@@ -15,9 +15,9 @@ import javax.script.ScriptException;
  * Represents formula-based content in a cell.
  */
 public class FormulaContent implements Content {
-    private String formula;  // The raw formula string (e.g., "=A1+B2")
-    private double cachedValue;  // Cached result of the formula after evaluation
-    private boolean isEvaluated;  // Indicates if the formula has been evaluated
+    private String formula;
+    private double cachedValue;
+    private boolean isEvaluated;
 
     // Constructor
     public FormulaContent(String formula) {
@@ -69,15 +69,12 @@ public class FormulaContent implements Content {
         isEvaluated = true;
     }
 
-    // Helper method to evaluate expressions with basic operators (+, -, *, /, %)
     private double evaluateExpression(String expression, Map<String, Cell> cells) throws Exception {
 
 
         return parseAndEvaluate(expression, cells);
     }
 
-    // Function to parse and evaluate the expression with operator precedence
-    // Function to parse and evaluate the expression with operator precedence and functions
     private double parseAndEvaluate(String expression, Map<String, Cell> cells) throws Exception {
         Stack<Double> values = new Stack<>();
         Stack<Character> operators = new Stack<>();
@@ -86,79 +83,82 @@ public class FormulaContent implements Content {
         while (i < expression.length()) {
             char ch = expression.charAt(i);
 
-            // Skip spaces
             if (ch == ' ') {
                 i++;
                 continue;
             }
 
-            // Handle numbers, cell references, and functions
             if (Character.isDigit(ch) || Character.isLetter(ch)) {
                 StringBuilder sb = new StringBuilder();
 
-                // Extract the token (number, cell reference, or function argument)
                 while (i < expression.length() && (Character.isDigit(expression.charAt(i)) ||
                         expression.charAt(i) == '.' ||
                         Character.isLetter(expression.charAt(i)) ||
-                        expression.charAt(i) == ':' ||  // For ranges (e.g., A1:B2)
-                        expression.charAt(i) == ',' || // For function arguments
-                        expression.charAt(i) == ';' || // For function arguments
-                        expression.charAt(i) == '(' || // Handle opening parentheses for functions
-                        expression.charAt(i) == ')')) { // Handle closing parentheses for functions
+                        expression.charAt(i) == ':' ||
+                        expression.charAt(i) == ',' ||
+                        expression.charAt(i) == ';' ||
+                        expression.charAt(i) == '(' ||
+                        expression.charAt(i) == ')')) {
                     sb.append(expression.charAt(i));
                     i++;
                 }
 
                 String token = sb.toString();
+                // System.out.println("Token: " + token);
 
-               //  System.out.println("Token: " + token);
-
-                // Check for functions (SUMA, MIN, MAX, PROMEDIO)
                 if (token.startsWith("SUMA(") || token.startsWith("MIN(") ||
                         token.startsWith("MAX(") || token.startsWith("PROMEDIO(")) {
-
                     // System.out.println("Detected function: " + token);
                     values.push(evaluateFunction(token, cells));
                 } else {
-                    // Handle cell reference or number
                     double value;
                     if (cells.containsKey(token)) {
                         value = cells.get(token).getValueAsNumber();
+                        // System.out.println("Cell reference " + token + " value: " + value);
                     } else {
                         try {
-                            value = Double.parseDouble(token);  // Parse as number
+                            value = Double.parseDouble(token);
+                            // System.out.println("Parsed number: " + value);
                         } catch (NumberFormatException e) {
-                            throw new Exception("Invalid token: " + token);  // Handle invalid tokens
+                            throw new Exception("Invalid token: " + token);
                         }
                     }
                     values.push(value);
                 }
-
                 continue;
             }
 
-            // Handle operators
             if (ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '%') {
-                // Apply operator precedence
                 while (!operators.isEmpty() && hasPrecedence(ch, operators.peek())) {
-                    values.push(applyOperation(operators.pop(), values.pop(), values.pop()));
+                    double val2 = values.pop();
+                    double val1 = values.pop();
+                    char op = operators.pop();
+                    double result = applyOperation(op, val1, val2);
+                    // System.out.println("Applied operator " + op + " to " + val1 + " and " + val2 + " result: " + result);
+                    values.push(result);
                 }
-                operators.push(ch);  // Push the current operator
-                i++;  // Move past the operator
+                operators.push(ch);
+                // System.out.println("Pushed operator: " + ch);
+                i++;
                 continue;
             }
 
-            // Handle parentheses (for grouping expressions)
             if (ch == '(') {
-                operators.push(ch);  // Push the opening parenthesis
+                operators.push(ch);
+                // System.out.println("Pushed opening parenthesis: (");
                 i++;
                 continue;
             } else if (ch == ')') {
-                // Apply operators until matching '(' is found
                 while (!operators.isEmpty() && operators.peek() != '(') {
-                    values.push(applyOperation(operators.pop(), values.pop(), values.pop()));
+                    double val2 = values.pop();
+                    double val1 = values.pop();
+                    char op = operators.pop();
+                    double result = applyOperation(op, val1, val2);
+                    // System.out.println("Applied operator " + op + " to " + val1 + " and " + val2 + " result: " + result);
+                    values.push(result);
                 }
-                operators.pop();  // Pop the '('
+                operators.pop();
+                // System.out.println("Popped opening parenthesis: (");
                 i++;
                 continue;
             }
@@ -166,15 +166,20 @@ public class FormulaContent implements Content {
             i++;
         }
 
-        // Apply remaining operations
         while (!operators.isEmpty()) {
-            values.push(applyOperation(operators.pop(), values.pop(), values.pop()));
+            double val2 = values.pop();
+            double val1 = values.pop();
+            char op = operators.pop();
+            double result = applyOperation(op, val1, val2);
+            // System.out.println("Applied operator " + op + " to " + val1 + " and " + val2 + " result: " + result);
+            values.push(result);
         }
 
-        return values.pop();
+        double finalResult = values.pop();
+        // System.out.println("Final result: " + finalResult);
+        return finalResult;
     }
 
-    // Evaluate aggregate functions: SUMA, MIN, MAX, PROMEDIO
     private double evaluateFunction(String token, Map<String, Cell> cells) throws Exception {
         if (!token.endsWith(")")) {
             throw new Exception("Invalid function syntax: " + token);
@@ -206,27 +211,26 @@ public class FormulaContent implements Content {
 
     private List<Double> getValuesFromArguments(String arguments, Map<String, Cell> cells) throws Exception {
         List<Double> values = new ArrayList<>();
-        String[] parts = arguments.split("[,;]"); // Split by commas or semicolons
+        String[] parts = arguments.split("[,;]");
 
         for (String part : parts) {
             part = part.trim();
             if (cells.containsKey(part)) {
                 values.add(cells.get(part).getValueAsNumber());
             } else if (part.contains(":")) {
-                // Handle ranges (e.g., A1:B2)
+
                 values.addAll(getValuesFromRange(part, cells));
             } else {
-                values.add(Double.parseDouble(part)); // Handle numeric literals
+                values.add(Double.parseDouble(part));
             }
         }
         return values;
     }
 
-    // Helper to get values from a range (e.g., A1:B2)
+
     private List<Double> getValuesFromRange(String range, Map<String, Cell> cells) throws Exception {
         List<Double> values = new ArrayList<>();
 
-        // Check if the range is a list of cell references separated by semicolons
         if (range.contains(";")) {
             String[] cellRefs = range.split(";");
             for (String numStr : cellRefs) {
@@ -245,16 +249,14 @@ public class FormulaContent implements Content {
 //            return values;
         }
 
-        // Check if the range is a comma-separated list of numbers
         if (range.contains(",")) {
             String[] numStrings = range.split(",");
             for (String numStr : numStrings) {
-                values.add(Double.parseDouble(numStr.trim())); // Parse each number
+                values.add(Double.parseDouble(numStr.trim()));
             }
             return values;
         }
 
-        // If the range has a colon ":", it refers to a range of cells
         if (range.contains(":")) {
             String[] bounds = range.split(":");
 
@@ -265,18 +267,17 @@ public class FormulaContent implements Content {
             String start = bounds[0].trim();
             String end = bounds[1].trim();
 
-            // For the range of cells, we need to figure out the coordinates
+
             int startRow = getRowFromCell(start);
             int startCol = getColFromCell(start);
             int endRow = getRowFromCell(end);
             int endCol = getColFromCell(end);
 
-            // Iterate through the range of cells and collect values
             for (String cellRef : cells.keySet()) {
                 int cellRow = getRowFromCell(cellRef);
                 int cellCol = getColFromCell(cellRef);
 
-                // Check if the cell is within the bounds of the range
+
                 if (cellRow >= startRow && cellRow <= endRow && cellCol >= startCol && cellCol <= endCol) {
                     values.add(cells.get(cellRef).getValueAsNumber());
                 }
@@ -284,14 +285,11 @@ public class FormulaContent implements Content {
             return values;
         }
 
-        // If it's not a comma-separated list or a range, it's an individual cell reference
-        // This case is treated as a degenerate range (start and end are the same)
+
         values.add(cells.get(range).getValueAsNumber());
         return values;
     }
 
-    // Helper method to extract row from cell reference (e.g., A1 -> 1)
-// Helper method to extract row number from a cell reference (e.g., A1 -> 1)
     private int getRowFromCell(String cellRef) {
         StringBuilder rowBuilder = new StringBuilder();
         for (char ch : cellRef.toCharArray()) {
@@ -302,7 +300,7 @@ public class FormulaContent implements Content {
         return Integer.parseInt(rowBuilder.toString());
     }
 
-    // Helper method to extract column number from a cell reference (e.g., A1 -> 1 for column A)
+
     private int getColFromCell(String cellRef) {
         StringBuilder colBuilder = new StringBuilder();
         for (char ch : cellRef.toCharArray()) {
@@ -311,19 +309,19 @@ public class FormulaContent implements Content {
             }
         }
 
-        // Convert column letters to a number (e.g., A -> 1, B -> 2, AA -> 27)
+
         int colNum = 0;
         for (char ch : colBuilder.toString().toUpperCase().toCharArray()) {
             colNum = colNum * 26 + (ch - 'A' + 1);
         }
         return colNum;
     }
-    // Dummy method to check if a cell reference is within a range (needs proper implementation)
+
     private boolean isInRange(String cellRef, String start, String end) {
         // Implement actual logic to determine if cellRef is within the start and end bounds
         return cellRef.compareTo(start) >= 0 && cellRef.compareTo(end) <= 0;
     }
-    // Check operator precedence
+
     private boolean hasPrecedence(char op1, char op2) {
 
 
@@ -333,7 +331,6 @@ public class FormulaContent implements Content {
         return true;
     }
 
-    // Apply an operation to two operands
     private double applyOperation(char operator, double b, double a) throws Exception {
         switch (operator) {
             case '+': return a + b;
@@ -350,14 +347,7 @@ public class FormulaContent implements Content {
     }
 
 
-    /**
-     * Replaces aggregate function calls in the expression with their computed values.
-     *
-     * @param expression The original expression containing function calls.
-     * @param functionEvaluator The FunctionEvaluator instance to evaluate functions.
-     * @return The expression with function calls replaced by their computed values.
-     * @throws Exception If there's an error evaluating the functions.
-     */
+
     private String replaceFunctionsWithValues(String expression, FunctionEvaluator functionEvaluator) throws Exception {
         // Regex to match aggregate function calls (e.g., SUMA(A1:B3;C1;3))
         Pattern pattern = Pattern.compile("(SUMA|MIN|MAX|PROMEDIO)\\(([^()]+)\\)");
@@ -373,14 +363,7 @@ public class FormulaContent implements Content {
         return expression;
     }
 
-    /**
-     * Evaluates a basic arithmetic expression (supports +, -, *, /).
-     *
-     * @param expression The arithmetic expression to evaluate.
-     * @param cells The map of cells to get values from.
-     * @return The computed result of the expression.
-     * @throws Exception If there's an error during evaluation.
-     */
+
     private double evaluateArithmeticExpression(String expression, Map<String, Cell> cells) throws Exception {
         // Replace cell references with their numeric values
         Pattern cellPattern = Pattern.compile("[A-Z]+\\d+");

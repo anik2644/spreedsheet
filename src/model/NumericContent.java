@@ -1,12 +1,10 @@
 package model;
 
-/**
- * Represents numerical content in a cell.
- */
+
 public class NumericContent implements Content {
     private double value;
 
-    // Constructor
+
     public NumericContent(double value) {
         this.value = value;
     }
