@@ -12,7 +12,7 @@ import java.util.*;
 public class Main {
 
     public static void main(String[] args) {
-        // Create a new Menu instance and display the main menu to the user
+
         Menu menu = new Menu();
         menu.displayMenu();
     }

@@ -222,22 +222,79 @@ public class FormulaContent implements Content {
     // Helper to get values from a range (e.g., A1:B2)
     private List<Double> getValuesFromRange(String range, Map<String, Cell> cells) throws Exception {
         List<Double> values = new ArrayList<>();
-        String[] bounds = range.split(":");
 
-        if (bounds.length != 2) {
-            throw new Exception("Invalid range syntax: " + range);
+        // First, check if the range is a simple comma-separated list of numbers
+        if (range.contains(",")) {
+            // Split by commas and treat each as an individual number
+            String[] numStrings = range.split(",");
+            for (String numStr : numStrings) {
+                values.add(Double.parseDouble(numStr.trim()));  // Parse each number
+            }
+            return values;
         }
 
-        String start = bounds[0];
-        String end = bounds[1];
+        // If the range has a colon ":", it refers to a range of cells
+        if (range.contains(":")) {
+            String[] bounds = range.split(":");
 
-        // Assuming a simple range (e.g., A1 to B2), iterate through the cells in the range
-        for (String cellRef : cells.keySet()) {
-            if (isInRange(cellRef, start, end)) {
-                values.add(cells.get(cellRef).getValueAsNumber());
+            if (bounds.length != 2) {
+                throw new Exception("Invalid range syntax: " + range);
+            }
+
+            String start = bounds[0].trim();
+            String end = bounds[1].trim();
+
+            // For the range of cells, we need to figure out the coordinates
+            int startRow = getRowFromCell(start);
+            int startCol = getColFromCell(start);
+            int endRow = getRowFromCell(end);
+            int endCol = getColFromCell(end);
+
+            // Iterate through the range of cells and collect values
+            for (String cellRef : cells.keySet()) {
+                int cellRow = getRowFromCell(cellRef);
+                int cellCol = getColFromCell(cellRef);
+
+                // Check if the cell is within the bounds of the range
+                if (cellRow >= startRow && cellRow <= endRow && cellCol >= startCol && cellCol <= endCol) {
+                    values.add(cells.get(cellRef).getValueAsNumber());
+                }
+            }
+            return values;
+        }
+
+        // If it's not a comma-separated list or a range, it's an individual cell reference
+        // This case is treated as a degenerate range (start and end are the same)
+        values.add(cells.get(range).getValueAsNumber());
+        return values;
+    }
+
+    // Helper method to extract row from cell reference (e.g., A1 -> 1)
+    private int getRowFromCell(String cellRef) {
+        StringBuilder rowBuilder = new StringBuilder();
+        for (char ch : cellRef.toCharArray()) {
+            if (Character.isDigit(ch)) {
+                rowBuilder.append(ch);
             }
         }
-        return values;
+        return Integer.parseInt(rowBuilder.toString());
+    }
+
+    // Helper method to extract column from cell reference (e.g., A1 -> A)
+    private int getColFromCell(String cellRef) {
+        StringBuilder colBuilder = new StringBuilder();
+        for (char ch : cellRef.toCharArray()) {
+            if (Character.isLetter(ch)) {
+                colBuilder.append(ch);
+            }
+        }
+
+        // Convert the column letters to a number (e.g., A -> 1, B -> 2)
+        int colNum = 0;
+        for (char ch : colBuilder.toString().toUpperCase().toCharArray()) {
+            colNum = colNum * 26 + (ch - 'A' + 1);
+        }
+        return colNum;
     }
 
     // Dummy method to check if a cell reference is within a range (needs proper implementation)
