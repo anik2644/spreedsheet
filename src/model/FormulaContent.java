@@ -1,6 +1,8 @@
 package model;
 import java.util.Map;
 import java.util.Stack;
+import java.util.List;
+import java.util.ArrayList;
 
 
 import java.util.regex.Pattern;
@@ -69,10 +71,13 @@ public class FormulaContent implements Content {
 
     // Helper method to evaluate expressions with basic operators (+, -, *, /, %)
     private double evaluateExpression(String expression, Map<String, Cell> cells) throws Exception {
+
+
         return parseAndEvaluate(expression, cells);
     }
 
     // Function to parse and evaluate the expression with operator precedence
+    // Function to parse and evaluate the expression with operator precedence and functions
     private double parseAndEvaluate(String expression, Map<String, Cell> cells) throws Exception {
         Stack<Double> values = new Stack<>();
         Stack<Character> operators = new Stack<>();
@@ -81,36 +86,80 @@ public class FormulaContent implements Content {
         while (i < expression.length()) {
             char ch = expression.charAt(i);
 
-            // Handle numbers and cell references
+            // Skip spaces
+            if (ch == ' ') {
+                i++;
+                continue;
+            }
+
+            // Handle numbers, cell references, and functions
             if (Character.isDigit(ch) || Character.isLetter(ch)) {
                 StringBuilder sb = new StringBuilder();
 
+                // Extract the token (number, cell reference, or function argument)
                 while (i < expression.length() && (Character.isDigit(expression.charAt(i)) ||
                         expression.charAt(i) == '.' ||
-                        Character.isLetter(expression.charAt(i)))) {
+                        Character.isLetter(expression.charAt(i)) ||
+                        expression.charAt(i) == ':' ||  // For ranges (e.g., A1:B2)
+                        expression.charAt(i) == ',' || // For function arguments
+                        expression.charAt(i) == '(' || // Handle opening parentheses for functions
+                        expression.charAt(i) == ')')) { // Handle closing parentheses for functions
                     sb.append(expression.charAt(i));
                     i++;
                 }
 
                 String token = sb.toString();
-                double value;
 
-                if (cells.containsKey(token)) {
-                    value = cells.get(token).getValueAsNumber();
+               //  System.out.println("Token: " + token);
+
+                // Check for functions (SUMA, MIN, MAX, PROMEDIO)
+                if (token.startsWith("SUMA(") || token.startsWith("MIN(") ||
+                        token.startsWith("MAX(") || token.startsWith("PROMEDIO(")) {
+
+                    // System.out.println("Detected function: " + token);
+                    values.push(evaluateFunction(token, cells));
                 } else {
-                    value = Double.parseDouble(token);
+                    // Handle cell reference or number
+                    double value;
+                    if (cells.containsKey(token)) {
+                        value = cells.get(token).getValueAsNumber();
+                    } else {
+                        try {
+                            value = Double.parseDouble(token);  // Parse as number
+                        } catch (NumberFormatException e) {
+                            throw new Exception("Invalid token: " + token);  // Handle invalid tokens
+                        }
+                    }
+                    values.push(value);
                 }
 
-                values.push(value);
                 continue;
             }
 
             // Handle operators
             if (ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '%') {
+                // Apply operator precedence
                 while (!operators.isEmpty() && hasPrecedence(ch, operators.peek())) {
                     values.push(applyOperation(operators.pop(), values.pop(), values.pop()));
                 }
-                operators.push(ch);
+                operators.push(ch);  // Push the current operator
+                i++;  // Move past the operator
+                continue;
+            }
+
+            // Handle parentheses (for grouping expressions)
+            if (ch == '(') {
+                operators.push(ch);  // Push the opening parenthesis
+                i++;
+                continue;
+            } else if (ch == ')') {
+                // Apply operators until matching '(' is found
+                while (!operators.isEmpty() && operators.peek() != '(') {
+                    values.push(applyOperation(operators.pop(), values.pop(), values.pop()));
+                }
+                operators.pop();  // Pop the '('
+                i++;
+                continue;
             }
 
             i++;
@@ -124,8 +173,82 @@ public class FormulaContent implements Content {
         return values.pop();
     }
 
+    // Evaluate aggregate functions: SUMA, MIN, MAX, PROMEDIO
+    private double evaluateFunction(String token, Map<String, Cell> cells) throws Exception {
+        if (!token.endsWith(")")) {
+            throw new Exception("Invalid function syntax: " + token);
+        }
+
+        int start = token.indexOf('(') + 1;
+        int end = token.lastIndexOf(')');
+        String arguments = token.substring(start, end);
+
+        List<Double> values = getValuesFromArguments(arguments, cells);
+     //   System.out.println("Values for function " + token + ": " + values);
+
+        if (token.startsWith("SUMA")) {
+          //  System.out.println("come to suma");
+            return values.stream().mapToDouble(Double::doubleValue).sum();
+        } else if (token.startsWith("MIN")) {
+            return values.stream().mapToDouble(Double::doubleValue).min().orElseThrow(() -> new Exception("No values for MIN"));
+        } else if (token.startsWith("MAX")) {
+            return values.stream().mapToDouble(Double::doubleValue).max().orElseThrow(() -> new Exception("No values for MAX"));
+        } else if (token.startsWith("PROMEDIO")) {
+            return values.stream().mapToDouble(Double::doubleValue).average().orElseThrow(() -> new Exception("No values for PROMEDIO"));
+        }
+
+        throw new Exception("Unknown function: " + token);
+    }
+
+    // Helper to get values from function arguments
+    private List<Double> getValuesFromArguments(String arguments, Map<String, Cell> cells) throws Exception {
+        List<Double> values = new ArrayList<>();
+        String[] parts = arguments.split(",");
+
+        for (String part : parts) {
+            part = part.trim();
+            if (cells.containsKey(part)) {
+                values.add(cells.get(part).getValueAsNumber());
+            } else if (part.contains(":")) {
+                // Handle ranges (e.g., A1:B2)
+                values.addAll(getValuesFromRange(part, cells));
+            } else {
+                values.add(Double.parseDouble(part));
+            }
+        }
+        return values;
+    }
+
+    // Helper to get values from a range (e.g., A1:B2)
+    private List<Double> getValuesFromRange(String range, Map<String, Cell> cells) throws Exception {
+        List<Double> values = new ArrayList<>();
+        String[] bounds = range.split(":");
+
+        if (bounds.length != 2) {
+            throw new Exception("Invalid range syntax: " + range);
+        }
+
+        String start = bounds[0];
+        String end = bounds[1];
+
+        // Assuming a simple range (e.g., A1 to B2), iterate through the cells in the range
+        for (String cellRef : cells.keySet()) {
+            if (isInRange(cellRef, start, end)) {
+                values.add(cells.get(cellRef).getValueAsNumber());
+            }
+        }
+        return values;
+    }
+
+    // Dummy method to check if a cell reference is within a range (needs proper implementation)
+    private boolean isInRange(String cellRef, String start, String end) {
+        // Implement actual logic to determine if cellRef is within the start and end bounds
+        return cellRef.compareTo(start) >= 0 && cellRef.compareTo(end) <= 0;
+    }
     // Check operator precedence
     private boolean hasPrecedence(char op1, char op2) {
+
+
         if ((op1 == '*' || op1 == '/' || op1 == '%') && (op2 == '+' || op2 == '-')) {
             return false;
         }
