@@ -67,15 +67,36 @@ public class Menu {
     }
 
     private boolean isValidFormula(String formula) {
-        // Extract all potential cell references in the formula
-        String[] tokens = formula.substring(1).split("[^A-Z0-9]+");
-        for (String token : tokens) {
-            if (!token.isEmpty() && !isValidCoordinate(token)) {
-                return false;
-            }
+        // Ensure the formula starts with '='
+        if (!formula.startsWith("=")) {
+            return false;
         }
-        return true;
+
+        // Remove the leading '=' for validation purposes
+        formula = formula.substring(1).trim();
+
+        // Regex to match cell references (e.g., A1, B2, AA10)
+        String cellRef = "[A-Z]+\\d+";
+
+        // Regex to match ranges (e.g., A1:B3)
+        String cellRange = cellRef + ":" + cellRef;
+
+        // Regex to match numbers (e.g., 10, 3.5)
+        String number = "\\d+(\\.\\d+)?";
+
+        // Regex to match aggregate functions with arguments (e.g., SUMA(A1:B3;C1;3))
+        String function = "(SUMA|MIN|MAX|PROMEDIO)\\(([^()]*)\\)";
+
+        // Combine all valid tokens (functions, ranges, cell references, numbers)
+        String validToken = String.format("(%s|%s|%s|%s)", function, cellRange, cellRef, number);
+
+        // Full regex to validate the entire formula with operators and parentheses
+        String formulaRegex = String.format("^(%s|[+\\-*/();\\s])+?$", validToken);
+
+        // Check if the formula matches the full regex pattern
+        return formula.matches(formulaRegex);
     }
+
     /**
      * Adds or modifies a cell in the spreadsheet.
      */
