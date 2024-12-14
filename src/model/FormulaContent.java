@@ -1,6 +1,8 @@
 package model;
-
 import java.util.Map;
+import java.util.Stack;
+
+
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import javax.script.ScriptEngine;
@@ -21,6 +23,10 @@ public class FormulaContent implements Content {
         this.isEvaluated = false;
     }
 
+
+
+
+    /*
     // Evaluate the formula and update the cached value
     public void evaluate(Map<String, Cell> cells) throws Exception {
         if (!formula.startsWith("=")) {
@@ -47,6 +53,101 @@ public class FormulaContent implements Content {
         // Evaluate the final expression (supports basic arithmetic operations)
         return evaluateArithmeticExpression(expression, cells);
     }
+
+
+    */
+    public void evaluate(Map<String, Cell> cells) throws Exception {
+        if (!formula.startsWith("=")) {
+            throw new Exception("Invalid formula: " + formula);
+        }
+
+        String expression = formula.substring(1).replace(" ", "");
+        double result = evaluateExpression(expression, cells);
+        cachedValue = result;
+        isEvaluated = true;
+    }
+
+    // Helper method to evaluate expressions with basic operators (+, -, *, /, %)
+    private double evaluateExpression(String expression, Map<String, Cell> cells) throws Exception {
+        return parseAndEvaluate(expression, cells);
+    }
+
+    // Function to parse and evaluate the expression with operator precedence
+    private double parseAndEvaluate(String expression, Map<String, Cell> cells) throws Exception {
+        Stack<Double> values = new Stack<>();
+        Stack<Character> operators = new Stack<>();
+        int i = 0;
+
+        while (i < expression.length()) {
+            char ch = expression.charAt(i);
+
+            // Handle numbers and cell references
+            if (Character.isDigit(ch) || Character.isLetter(ch)) {
+                StringBuilder sb = new StringBuilder();
+
+                while (i < expression.length() && (Character.isDigit(expression.charAt(i)) ||
+                        expression.charAt(i) == '.' ||
+                        Character.isLetter(expression.charAt(i)))) {
+                    sb.append(expression.charAt(i));
+                    i++;
+                }
+
+                String token = sb.toString();
+                double value;
+
+                if (cells.containsKey(token)) {
+                    value = cells.get(token).getValueAsNumber();
+                } else {
+                    value = Double.parseDouble(token);
+                }
+
+                values.push(value);
+                continue;
+            }
+
+            // Handle operators
+            if (ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '%') {
+                while (!operators.isEmpty() && hasPrecedence(ch, operators.peek())) {
+                    values.push(applyOperation(operators.pop(), values.pop(), values.pop()));
+                }
+                operators.push(ch);
+            }
+
+            i++;
+        }
+
+        // Apply remaining operations
+        while (!operators.isEmpty()) {
+            values.push(applyOperation(operators.pop(), values.pop(), values.pop()));
+        }
+
+        return values.pop();
+    }
+
+    // Check operator precedence
+    private boolean hasPrecedence(char op1, char op2) {
+        if ((op1 == '*' || op1 == '/' || op1 == '%') && (op2 == '+' || op2 == '-')) {
+            return false;
+        }
+        return true;
+    }
+
+    // Apply an operation to two operands
+    private double applyOperation(char operator, double b, double a) throws Exception {
+        switch (operator) {
+            case '+': return a + b;
+            case '-': return a - b;
+            case '*': return a * b;
+            case '/':
+                if (b == 0) throw new Exception("Division by zero");
+                return a / b;
+            case '%':
+                if (b == 0) throw new Exception("Division by zero");
+                return a % b;
+            default: throw new Exception("Invalid operator: " + operator);
+        }
+    }
+
 
     /**
      * Replaces aggregate function calls in the expression with their computed values.
