@@ -25,9 +25,6 @@ public class Menu {
         this.scanner = new Scanner(System.in);
     }
 
-    /**
-     * Displays the main menu and processes user input.
-     */
     public void displayMenu() {
         boolean exit = false;
 
@@ -103,9 +100,6 @@ public class Menu {
         return result;
     }
 
-    /**
-     * Adds or modifies a cell in the spreadsheet.
-     */
 
     public static int findOperatorIndex(String formula) {
         // Define the list of operators
@@ -150,24 +144,6 @@ public class Menu {
         }
 
         return hasNestedFunction;
-    }
-
-
-    // Formula Node class to represent a node in the formula tree
-    static class FormulaNode {
-        String value; // The value of the node (could be a function or an argument)
-        List<FormulaNode> children; // List of child nodes (arguments or inner formulas)
-
-        // Constructor
-        public FormulaNode(String value) {
-            this.value = value;
-            this.children = new ArrayList<>();
-        }
-
-        // Add a child node
-        public void addChild(FormulaNode child) {
-            this.children.add(child);
-        }
     }
 
 
@@ -268,111 +244,14 @@ public class Menu {
         return value.matches("[A-Za-z]+\\d+:[A-Za-z]+\\d+");
     }
 
-    // Check if the node value is a numeric operand (not a function/operator)
-    private static boolean isNumeric(String value) {
-        try {
-            Double.parseDouble(value);
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
-        }
-    }
 
-    // Check if the value is a cell reference
-    private static boolean isCellReference(String value) {
-        return value.matches("[A-Z]+\\d+");
-    }
 
     // Check if the value is a function (like SUMA, MIN, etc.)
     private static boolean isFunction(String value) {
         return value.matches("SUMA|MIN|MAX|PROMEDIO|\\+|\\-|\\*|\\/|%");
     }
 
-    // Check if the value is an operator (e.g., +, -, *, /)
-    public static FormulaNode buildFormulaTree(String formula) {
-        // Remove the leading '=' symbol
-        formula = formula.substring(1);
 
-        // Find the root function (e.g., MAX, SUMA, etc.)
-        String rootFunction = formula.substring(0, formula.indexOf('('));  // Get the function name
-        FormulaNode rootNode = new FormulaNode(rootFunction);
-
-        // Extract inner formulas and arguments recursively
-        int openParenthesesCount = 0;
-        StringBuilder currentFormula = new StringBuilder();
-        List<FormulaNode> currentArguments = new ArrayList<>();
-
-        // Process the formula
-        for (int i = formula.indexOf('(') + 1; i < formula.length(); i++) {
-            char ch = formula.charAt(i);
-
-            // Handle opening parentheses
-            if (ch == '(') {
-                openParenthesesCount++;
-                currentFormula.append(ch);  // Start a new formula inside parentheses
-            }
-            // Handle closing parentheses
-            else if (ch == ')') {
-                openParenthesesCount--;
-                currentFormula.append(ch);  // End the current formula
-
-                if (openParenthesesCount == 0) {
-                    // We've finished processing an inner formula
-                    FormulaNode childNode = new FormulaNode(currentFormula.toString());
-                    currentArguments.add(childNode);
-                    currentFormula.setLength(0);  // Clear the current formula for next argument
-                }
-            }
-            // Handle semicolon separating arguments
-            else if (ch == ';' && openParenthesesCount == 0) {
-                // Add the argument if it is not an empty string
-                if (currentFormula.length() > 0) {
-                    FormulaNode childNode = new FormulaNode(currentFormula.toString());
-                    currentArguments.add(childNode);
-                    currentFormula.setLength(0);  // Reset the current formula for next argument
-                }
-            } else {
-                currentFormula.append(ch);  // Add the character to the current argument/formula
-            }
-        }
-
-        // Add the last argument if there is any remaining formula part after the loop
-        if (currentFormula.length() > 0) {
-            FormulaNode childNode = new FormulaNode(currentFormula.toString());
-            currentArguments.add(childNode);
-        }
-
-        // Add all arguments as children of the root node
-        for (FormulaNode child : currentArguments) {
-            rootNode.addChild(child);
-        }
-
-        return rootNode;
-    }
-
-    // Helper method to print the formula tree
-    public static void printFormulaTree(FormulaNode node, int level) {
-        // Print the current node's value (formula or argument)
-        System.out.println("  ".repeat(level) + node.value);
-
-        // Recursively print each child (inner formulas or arguments)
-        for (FormulaNode child : node.children) {
-            printFormulaTree(child, level + 1);
-        }
-    }
-
-    public void postOrderTraversal(FormulaNode node) {
-        // If the node is not null, process it
-        if (node != null) {
-            // First, recursively traverse all children (from leaf to root)
-            for (FormulaNode child : node.children) {
-                postOrderTraversal(child);
-            }
-
-            // After traversing the children, process the current node (print value)
-            System.out.println("Node value: " + node.value); // Print the node's value (formula or argument)
-        }
-    }
 
     public String complexFormula(String finalString,String formula, String coordinate) {
 
@@ -477,6 +356,8 @@ public class Menu {
 
         return result.toString();
     }
+
+
     private void addOrModifyCell() {
         String coordinate;
         while (true) {
@@ -497,6 +378,11 @@ public class Menu {
 
         Content content;
         if (contentInput.startsWith("=")) {
+             Spreadsheet.coordinateMap.put(coordinate, contentInput);
+//            Map<String, Cell> cells = new HashMap<>();
+//            Cell cell = cells.getOrDefault(coordinate, new Cell(coordinate));
+//            cell.setContent(new FormulaContent(contentInput.toString()));
+//            cells.put(coordinate, cell);
 
             contentInput = contentInput.toUpperCase();
 
@@ -618,6 +504,25 @@ public class Menu {
     private void saveSpreadsheet() {
 //        System.out.print("Enter file path to save the spreadsheet (e.g., spreadsheet.s2v): ");
 //        String filePath = scanner.nextLine();
+//
+//        System.out.println("Generated Map: " + Spreadsheet.coordinateMap);
+//
+//        for (Map.Entry<String, String> entry : Spreadsheet.coordinateMap.entrySet()) {
+//            String coordinate = entry.getKey();
+//            String newContent = entry.getValue();
+//
+//            // Check if the cell exists, if not create a new one
+//            Cell cell = spreadsheet.getCells().getOrDefault(coordinate, new Cell(coordinate));
+//
+//            // Update the cell's content with new content
+//            // Assuming TextContent for simplicity. If it's a formula or number, modify this logic accordingly
+//            Content cellContent = new FormulaContent(newContent);  // Assuming it's a formula content
+//            cell.setContent(cellContent);
+//
+//            // Update the cell in the spreadsheet
+//            spreadsheet.getCells().put(coordinate, cell);
+//        }
+
         String filePath = "src/spreedshet.s2v";
 
         try {
@@ -642,7 +547,129 @@ public class Menu {
     }
 
     private void tocheck(){
-
-
+        System.out.println("nothing to do");
+        return;
     }
+
+
+    // Helper method to print the formula tree
+    public static void printFormulaTree(FormulaNode node, int level) {
+        // Print the current node's value (formula or argument)
+        System.out.println("  ".repeat(level) + node.value);
+
+        // Recursively print each child (inner formulas or arguments)
+        for (FormulaNode child : node.children) {
+            printFormulaTree(child, level + 1);
+        }
+    }
+
+    public void postOrderTraversal(FormulaNode node) {
+        // If the node is not null, process it
+        if (node != null) {
+            // First, recursively traverse all children (from leaf to root)
+            for (FormulaNode child : node.children) {
+                postOrderTraversal(child);
+            }
+
+            // After traversing the children, process the current node (print value)
+            System.out.println("Node value: " + node.value); // Print the node's value (formula or argument)
+        }
+    }
+    // Check if the value is an operator (e.g., +, -, *, /)
+    public static FormulaNode buildFormulaTree(String formula) {
+        // Remove the leading '=' symbol
+        formula = formula.substring(1);
+
+        // Find the root function (e.g., MAX, SUMA, etc.)
+        String rootFunction = formula.substring(0, formula.indexOf('('));  // Get the function name
+        FormulaNode rootNode = new FormulaNode(rootFunction);
+
+        // Extract inner formulas and arguments recursively
+        int openParenthesesCount = 0;
+        StringBuilder currentFormula = new StringBuilder();
+        List<FormulaNode> currentArguments = new ArrayList<>();
+
+        // Process the formula
+        for (int i = formula.indexOf('(') + 1; i < formula.length(); i++) {
+            char ch = formula.charAt(i);
+
+            // Handle opening parentheses
+            if (ch == '(') {
+                openParenthesesCount++;
+                currentFormula.append(ch);  // Start a new formula inside parentheses
+            }
+            // Handle closing parentheses
+            else if (ch == ')') {
+                openParenthesesCount--;
+                currentFormula.append(ch);  // End the current formula
+
+                if (openParenthesesCount == 0) {
+                    // We've finished processing an inner formula
+                    FormulaNode childNode = new FormulaNode(currentFormula.toString());
+                    currentArguments.add(childNode);
+                    currentFormula.setLength(0);  // Clear the current formula for next argument
+                }
+            }
+            // Handle semicolon separating arguments
+            else if (ch == ';' && openParenthesesCount == 0) {
+                // Add the argument if it is not an empty string
+                if (currentFormula.length() > 0) {
+                    FormulaNode childNode = new FormulaNode(currentFormula.toString());
+                    currentArguments.add(childNode);
+                    currentFormula.setLength(0);  // Reset the current formula for next argument
+                }
+            } else {
+                currentFormula.append(ch);  // Add the character to the current argument/formula
+            }
+        }
+
+        // Add the last argument if there is any remaining formula part after the loop
+        if (currentFormula.length() > 0) {
+            FormulaNode childNode = new FormulaNode(currentFormula.toString());
+            currentArguments.add(childNode);
+        }
+
+        // Add all arguments as children of the root node
+        for (FormulaNode child : currentArguments) {
+            rootNode.addChild(child);
+        }
+
+        return rootNode;
+    }
+    // Check if the node value is a numeric operand (not a function/operator)
+    private static boolean isNumeric(String value) {
+        try {
+            Double.parseDouble(value);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    // Check if the value is a cell reference
+    private static boolean isCellReference(String value) {
+        return value.matches("[A-Z]+\\d+");
+    }
+
+    // Formula Node class to represent a node in the formula tree
+    static class FormulaNode {
+        String value; // The value of the node (could be a function or an argument)
+        List<FormulaNode> children; // List of child nodes (arguments or inner formulas)
+
+        // Constructor
+        public FormulaNode(String value) {
+            this.value = value;
+            this.children = new ArrayList<>();
+        }
+
+        // Add a child node
+        public void addChild(FormulaNode child) {
+            this.children.add(child);
+        }
+    }
+
+
+
+
+
 }

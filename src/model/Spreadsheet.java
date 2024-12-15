@@ -3,6 +3,7 @@ package model;
 import java.util.*;
 
 public class Spreadsheet {
+    public static  Map<String, String> coordinateMap = new HashMap<>();
     private Map<String, Cell> cells;
     private Map<String, Set<String>> dependencies;
 
@@ -16,6 +17,15 @@ public class Spreadsheet {
 
         if (content instanceof FormulaContent) {
             FormulaContent formulaContent = (FormulaContent) content;
+
+
+
+
+
+
+
+
+
 
             if (hasCircularDependency(coordinate, formulaContent)) {
                 System.out.println("Circular dependency detected! Cannot add this formula to cell " + coordinate);
