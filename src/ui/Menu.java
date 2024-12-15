@@ -107,6 +107,19 @@ public class Menu {
      * Adds or modifies a cell in the spreadsheet.
      */
 
+    public static int findOperatorIndex(String formula) {
+        // Define the list of operators
+        String operators = "[+\\-*/%]";
+
+        // Loop through the formula and check each character
+        for (int i = 0; i < formula.length(); i++) {
+            if (String.valueOf(formula.charAt(i)).matches(operators)) {
+                return i;  // Return the index of the first operator found
+            }
+        }
+
+        return -1;  // Return -1 if no operator is found
+    }
 
     public boolean ifNested(String formula) {
         // Check if the formula contains a function call with parentheses
@@ -128,7 +141,9 @@ public class Menu {
             }
 
             // If there are nested parentheses and we find another function call
-            if (openParenthesesCount > 1 && ch == ';'||ch == ':'||ch == ',') {
+            if (openParenthesesCount > 1 && (ch == ';'||ch == ':'||ch == ',')) {
+
+                System.out.println(openParenthesesCount + "  "+ ch);
                 hasNestedFunction = true;
                 break;
             }
@@ -188,7 +203,7 @@ public class Menu {
             formula.append(")");
 
             // Print the most independent formula
-            System.out.println("Formula: " + formula);
+           // System.out.println("Formula: " + formula);
 
             // Create formula content and update the spreadsheet
             FormulaContent formulaContent = new FormulaContent(formula.toString());
@@ -197,7 +212,7 @@ public class Menu {
             // Retrieve the calculated value from the spreadsheet
             Cell cell = spreadsheet.getCell(coordinate);
             String value = (cell != null) ? cell.getValueAsString() : "Cell is empty";
-            System.out.println("Value of: " + coordinate + "  : " + value);
+           // System.out.println("Value of: " + coordinate + "  : " + value);
 
             // Replace this formula with the calculated value
             node.value = value;
@@ -359,6 +374,80 @@ public class Menu {
         }
     }
 
+    public String complexFormula(String finalString,String formula, String coordinate) {
+
+        String value;
+        int operatorIndex = findOperatorIndex(formula);
+        System.out.println("Operator Index: " + operatorIndex);
+
+        // Split the formula if an operator is found
+        if (operatorIndex != -1) {
+
+            String part1 = cleanString(formula.substring(0, operatorIndex).trim());
+            String part2 = "="+ cleanString(formula.substring(operatorIndex + 1).trim());
+
+
+            if(this.ifNested(part1)) {
+                TreeNode root = parseFormula(part1);
+                 value = visitTree(root, coordinate);
+            }
+            else{
+                FormulaContent formulaContent = new FormulaContent(part1);
+                spreadsheet.addOrModifyCell(coordinate, formulaContent);
+                // Retrieve the calculated value from the spreadsheet
+                Cell cell = spreadsheet.getCell(coordinate);
+                value = (cell != null) ? cell.getValueAsString() : "Cell is empty";
+
+            }
+
+            System.out.println("First part: " + part1);
+            System.out.println("Second part: " + part2);
+
+
+
+
+            finalString = finalString + value + " "+ formula.charAt(operatorIndex) + " ";;
+            System.out.println("cur fin " + finalString);
+
+            finalString = finalString + complexFormula("",part2,coordinate);
+
+        } else {
+            if(this.ifNested(formula)) {
+                TreeNode root = parseFormula(formula);
+                value = visitTree(root, coordinate);
+            }
+            else{
+                FormulaContent formulaContent = new FormulaContent(formula);
+                spreadsheet.addOrModifyCell(coordinate, formulaContent);
+                // Retrieve the calculated value from the spreadsheet
+                Cell cell = spreadsheet.getCell(coordinate);
+                value = (cell != null) ? cell.getValueAsString() : "Cell is empty";
+
+            }
+
+            finalString = finalString +" "+ value ;
+            System.out.println("cur fin" + finalString);
+
+
+        }
+
+        return finalString;
+
+    }
+    public static String cleanString(String input) {
+        // Remove all spaces
+        input = input.replaceAll("\\s+", "");
+
+        // Remove unnecessary leading or trailing brackets
+        while (input.startsWith("(") || input.startsWith("[") || input.startsWith("{")) {
+            input = input.substring(1);  // Remove leading bracket
+        }
+        while (input.endsWith(")") || input.endsWith("]") || input.endsWith("}")) {
+            input = input.substring(0, input.length() - 1);  // Remove trailing bracket
+        }
+
+        return input;
+    }
     private void addOrModifyCell() {
         String coordinate;
         while (true) {
@@ -401,18 +490,45 @@ public class Menu {
             {
                 System.out.println("Formula has nested functions: " + contentInput);
 
-
-                TreeNode root = parseFormula(contentInput);
-                System.out.println(root);
+               // String formula = "= SUMA(B1:C2) * SUMA(A1;SUMA(B1:C2)";
 
 
-                String result = visitTree(root, coordinate);
-                System.out.println("Final Value: " + result);
+                int operatorIndex = findOperatorIndex(contentInput);
+                System.out.println("Operator Index: " + operatorIndex);
+
+                // Split the formula if an operator is found
+                if (operatorIndex != -1) {
+                    String finalString = "=";
+                    contentInput =  contentInput.replaceAll("\\s+", "");
+                    contentInput = cleanString(contentInput);
+                    System.out.println(contentInput);
+                       finalString =  complexFormula(finalString,contentInput,coordinate);
+                       finalString = finalString.replaceAll("\\s+", "");
+                       finalString = cleanString(finalString);
+                    System.out.println("Final String: " + finalString);
 
 
-                TextContent formu = new TextContent(result);
-                spreadsheet.addOrModifyCell(coordinate,formu );
-                System.out.println("Cell " + coordinate + " updated successfully.");
+
+                    FormulaContent formulaContent = new FormulaContent(finalString);
+                    spreadsheet.addOrModifyCell(coordinate, formulaContent);
+                    System.out.println("Cell " + coordinate + " updated successfully.");
+//                    System.out.println("Final String: " + finalString);
+                } else {
+                    TreeNode root = parseFormula(contentInput);
+                    // System.out.println(root);
+
+
+                    String result = visitTree(root, coordinate);
+                    // System.out.println("Final Value: " + result);
+
+
+                    TextContent formu = new TextContent(result);
+                    spreadsheet.addOrModifyCell(coordinate,formu );
+                    System.out.println("Cell " + coordinate + " updated successfully.");
+                    System.out.println("No operator found.");
+                }
+
+
                 return;
                 //contentInput = result;
 

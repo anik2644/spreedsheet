@@ -30,5 +30,6 @@ public class Main {
     }
 }
 ///     =SUMA(A1;SUMA(B1:C2);suma(5 ,A2),min(a1:a3))
-// =(SUMA(B1:C2) * SUMA(A1;SUMA(B1:C2);suma(5 ,A2),min(a1:a3)))
+// =SUMA(B1:C2) +  SUMA(A1;SUMA(B1:C2);suma(5 ,A2),min(a1:a3)) +5 +min(a1:a3)
 //  =SUMA(B1:C2)
+//1 + A1*((SUMA(A2:B2;PROMEDIO(B1:b3);C1;27)/4)+(a1-a2))

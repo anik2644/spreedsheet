@@ -334,7 +334,7 @@ public class FormulaContent implements Content {
     private double applyOperation(char operator, double b, double a) throws Exception {
         switch (operator) {
             case '+': return a + b;
-            case '-': return a - b;
+            case '-': return b - a;
             case '*': return a * b;
             case '/':
                 if (b == 0) throw new Exception("Division by zero");
