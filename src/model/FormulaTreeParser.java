@@ -1,5 +1,7 @@
 package model;
+
 import java.util.*;
+
 public class FormulaTreeParser {
 
     public static TreeNode parseFormula(String formula) {
@@ -18,35 +20,47 @@ public class FormulaTreeParser {
         Stack<TreeNode> stack = new Stack<>();
         StringBuilder currentToken = new StringBuilder();
         TreeNode root = null;
+        boolean insideFunction = false;
 
+        // Process the expression character by character
         for (int i = 0; i < expr.length(); i++) {
             char c = expr.charAt(i);
 
             if (c == '(') {
-                // Push the current token as an operator node
+                // If we encounter a '(', we may need to process a function
                 if (currentToken.length() > 0) {
                     TreeNode node = new TreeNode(currentToken.toString().trim());
                     stack.push(node);
                     currentToken.setLength(0);
                 }
+                insideFunction = true;
             } else if (c == ')') {
-                // Complete the current node and pop stack
+                // Closing a function, finish the current argument
                 if (currentToken.length() > 0) {
                     TreeNode child = new TreeNode(currentToken.toString().trim());
-                    stack.peek().addChild(child);
+                    if (!stack.isEmpty()) {
+                        stack.peek().addChild(child);
+                    }
                     currentToken.setLength(0);
                 }
-                TreeNode completedNode = stack.pop();
-                if (stack.isEmpty()) {
-                    root = completedNode;
-                } else {
-                    stack.peek().addChild(completedNode);
+
+                // Pop the function node and connect to the parent
+                if (!stack.isEmpty()) {
+                    TreeNode completedNode = stack.pop();
+                    if (stack.isEmpty()) {
+                        root = completedNode;
+                    } else {
+                        stack.peek().addChild(completedNode);
+                    }
                 }
+                insideFunction = false;
             } else if (c == ',' || c == ';') {
-                // Add the current token as a child to the top of the stack
+                // Handle separator for function arguments
                 if (currentToken.length() > 0) {
                     TreeNode child = new TreeNode(currentToken.toString().trim());
-                    stack.peek().addChild(child);
+                    if (!stack.isEmpty()) {
+                        stack.peek().addChild(child);
+                    }
                     currentToken.setLength(0);
                 }
             } else {
@@ -55,13 +69,11 @@ public class FormulaTreeParser {
             }
         }
 
-        // Handle root-level expressions without parentheses
+        // Handle the last token after parsing the expression
         if (currentToken.length() > 0 && root == null) {
             root = new TreeNode(currentToken.toString().trim());
         }
 
         return root;
     }
-
-
 }

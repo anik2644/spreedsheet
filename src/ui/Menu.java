@@ -143,7 +143,7 @@ public class Menu {
             // If there are nested parentheses and we find another function call
             if (openParenthesesCount > 1 && (ch == ';'||ch == ':'||ch == ',')) {
 
-                System.out.println(openParenthesesCount + "  "+ ch);
+           //     System.out.println(openParenthesesCount + "  "+ ch);
                 hasNestedFunction = true;
                 break;
             }
@@ -203,7 +203,7 @@ public class Menu {
             formula.append(")");
 
             // Print the most independent formula
-           // System.out.println("Formula: " + formula);
+            // System.out.println("Formula: " + formula);
 
             // Create formula content and update the spreadsheet
             FormulaContent formulaContent = new FormulaContent(formula.toString());
@@ -212,7 +212,7 @@ public class Menu {
             // Retrieve the calculated value from the spreadsheet
             Cell cell = spreadsheet.getCell(coordinate);
             String value = (cell != null) ? cell.getValueAsString() : "Cell is empty";
-           // System.out.println("Value of: " + coordinate + "  : " + value);
+            // System.out.println("Value of: " + coordinate + "  : " + value);
 
             // Replace this formula with the calculated value
             node.value = value;
@@ -389,7 +389,7 @@ public class Menu {
 
             if(this.ifNested(part1)) {
                 TreeNode root = parseFormula(part1);
-                 value = visitTree(root, coordinate);
+                value = visitTree(root, coordinate);
             }
             else{
                 FormulaContent formulaContent = new FormulaContent(part1);
@@ -401,7 +401,7 @@ public class Menu {
             }
 
             System.out.println("First part: " + part1);
-            System.out.println("Second part: " + part2);
+           System.out.println("Second part: " + part2);
 
 
 
@@ -426,7 +426,7 @@ public class Menu {
             }
 
             finalString = finalString +" "+ value ;
-            System.out.println("cur fin" + finalString);
+            System.out.println("cur fin " + finalString);
 
 
         }
@@ -438,15 +438,44 @@ public class Menu {
         // Remove all spaces
         input = input.replaceAll("\\s+", "");
 
-        // Remove unnecessary leading or trailing brackets
-        while (input.startsWith("(") || input.startsWith("[") || input.startsWith("{")) {
-            input = input.substring(1);  // Remove leading bracket
+        while (input.startsWith("(") && input.endsWith(")")) {
+            input = input.substring(1);
+            input = input.substring(0, input.length() - 1);
         }
-        while (input.endsWith(")") || input.endsWith("]") || input.endsWith("}")) {
-            input = input.substring(0, input.length() - 1);  // Remove trailing bracket
+            input = keepValidParentheses(input);
+        return input;
+    }
+
+    private static String keepValidParentheses(String input) {
+        StringBuilder result = new StringBuilder();
+        Stack<Character> stack = new Stack<>();
+
+        // Process the string to keep only valid parentheses
+        for (char c : input.toCharArray()) {
+            if (c == '(') {
+                stack.push(c);  // Push opening parenthesis onto the stack
+                result.append(c);  // Append to the result
+            } else if (c == ')') {
+                if (!stack.isEmpty() && stack.peek() == '(') {
+                    stack.pop();  // Remove matching opening parenthesis from the stack
+                    result.append(c);  // Append to the result
+                }
+                // If no matching opening parenthesis, ignore this closing parenthesis
+            } else {
+                result.append(c);  // Append non-parenthesis characters
+            }
         }
 
-        return input;
+        // Remove unmatched opening parentheses from the result
+        while (!stack.isEmpty()) {
+            int index = result.lastIndexOf("(");
+            if (index != -1) {
+                result.deleteCharAt(index);
+                stack.pop();
+            }
+        }
+
+        return result.toString();
     }
     private void addOrModifyCell() {
         String coordinate;
@@ -488,23 +517,23 @@ public class Menu {
 
             if(this.ifNested(contentInput))
             {
-                System.out.println("Formula has nested functions: " + contentInput);
+              //  System.out.println("Formula has nested functions: " + contentInput);
 
-               // String formula = "= SUMA(B1:C2) * SUMA(A1;SUMA(B1:C2)";
+                // String formula = "= SUMA(B1:C2) * SUMA(A1;SUMA(B1:C2)";
 
 
                 int operatorIndex = findOperatorIndex(contentInput);
-                System.out.println("Operator Index: " + operatorIndex);
+             //   System.out.println("Operator Index: " + operatorIndex);
 
                 // Split the formula if an operator is found
                 if (operatorIndex != -1) {
                     String finalString = "=";
                     contentInput =  contentInput.replaceAll("\\s+", "");
                     contentInput = cleanString(contentInput);
-                    System.out.println(contentInput);
-                       finalString =  complexFormula(finalString,contentInput,coordinate);
-                       finalString = finalString.replaceAll("\\s+", "");
-                       finalString = cleanString(finalString);
+                  //  System.out.println(contentInput);
+                    finalString =  complexFormula(finalString,contentInput,coordinate);
+                    finalString = finalString.replaceAll("\\s+", "");
+                    finalString = cleanString(finalString);
                     System.out.println("Final String: " + finalString);
 
 
@@ -525,7 +554,7 @@ public class Menu {
                     TextContent formu = new TextContent(result);
                     spreadsheet.addOrModifyCell(coordinate,formu );
                     System.out.println("Cell " + coordinate + " updated successfully.");
-                    System.out.println("No operator found.");
+                   // System.out.println("No operator found.");
                 }
 
 
