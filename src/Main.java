@@ -29,5 +29,5 @@ public class Main {
         System.out.println("Menu displayed successfully. Program execution complete.");
     }
 }
-///     =MAX(A1;SUMA(B1;C2);5)
+///     =SUMA(A1;SUMA(B1:C2);suma(5 ,A2),min(a1:a3))
 //  =SUMA(B1:C2)

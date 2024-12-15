@@ -128,7 +128,7 @@ public class Menu {
             }
 
             // If there are nested parentheses and we find another function call
-            if (openParenthesesCount > 1 && ch == ';') {
+            if (openParenthesesCount > 1 && ch == ';'||ch == ':'||ch == ',') {
                 hasNestedFunction = true;
                 break;
             }
@@ -168,14 +168,19 @@ public class Menu {
             visitTree(child, coordinate);
         }
 
-        // Process the current node after its children (post-order traversal)
+        // Always process the current node, even if it is the root
         if (isFunction(node.value)) {
             // Collect operands (children of the function) for the formula
             StringBuilder formula = new StringBuilder("=" + node.value + "(");
             for (int i = 0; i < node.children.size(); i++) {
                 TreeNode child = node.children.get(i);
                 if (i > 0) formula.append("; ");
-                formula.append(child.value);
+                if (isRange(child.value)) {
+                    // Treat ranges as a single operand
+                    formula.append(child.value); // Append the range as it is
+                } else {
+                    formula.append(child.value);
+                }
             }
             formula.append(")");
 
@@ -203,6 +208,12 @@ public class Menu {
         return node.value;
     }
 
+    // Helper function to identify ranges
+    private boolean isRange(String value) {
+        // A basic check to see if the value looks like a range, e.g., "B1:C2"
+        return value.matches("[A-Za-z]+\\d+:[A-Za-z]+\\d+");
+    }
+
 
     private static boolean isNumeric(String value) {
         try {
@@ -218,7 +229,8 @@ public class Menu {
     }
 
     private static boolean isFunction(String value) {
-        return value.matches("SUMA|MIN|MAX|PROMEDIO");
+        return value.matches("SUMA|MIN|MAX|PROMEDIO|/|%|\\+|\\-");
+
     }
 
     public static FormulaNode buildFormulaTree(String formula) {
