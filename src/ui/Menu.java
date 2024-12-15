@@ -155,6 +155,9 @@ public class Menu {
         }
     }
 
+
+
+    // Visit the tree and calculate the final result, handling both functions and operators
     public String visitTree(TreeNode node, String coordinate) {
         if (node == null) return null;
 
@@ -168,7 +171,7 @@ public class Menu {
             visitTree(child, coordinate);
         }
 
-        // Always process the current node, even if it is the root
+        // Process the current node after its children (post-order traversal)
         if (isFunction(node.value)) {
             // Collect operands (children of the function) for the formula
             StringBuilder formula = new StringBuilder("=" + node.value + "(");
@@ -204,17 +207,53 @@ public class Menu {
             return value;
         }
 
-        // If the node is not a function, return its value
+        // Now handle operators at the current level (e.g., multiplication)
+        if (isOperator(node.value)) {
+            // Process operands based on the operator
+            double leftOperand = Double.parseDouble(node.children.get(0).value);
+            double rightOperand = Double.parseDouble(node.children.get(1).value);
+
+            double result = 0;
+            switch (node.value) {
+                case "+":
+                    result = leftOperand + rightOperand;
+                    break;
+                case "-":
+                    result = leftOperand - rightOperand;
+                    break;
+                case "*":
+                    result = leftOperand * rightOperand;
+                    break;
+                case "/":
+                    result = leftOperand / rightOperand;
+                    break;
+                case "%":
+                    result = leftOperand % rightOperand;
+                    break;
+            }
+
+            // Update the node value with the result of the operation
+            node.value = String.valueOf(result);
+
+            // Return the calculated value
+            return node.value;
+        }
+
+        // If the node is not a function or operator, return its value
         return node.value;
+    }
+
+    // Helper method to identify operators
+    private static boolean isOperator(String value) {
+        return value.equals("+") || value.equals("-") || value.equals("*") || value.equals("/") || value.equals("%");
     }
 
     // Helper function to identify ranges
     private boolean isRange(String value) {
-        // A basic check to see if the value looks like a range, e.g., "B1:C2"
         return value.matches("[A-Za-z]+\\d+:[A-Za-z]+\\d+");
     }
 
-
+    // Check if the node value is a numeric operand (not a function/operator)
     private static boolean isNumeric(String value) {
         try {
             Double.parseDouble(value);
@@ -224,15 +263,17 @@ public class Menu {
         }
     }
 
+    // Check if the value is a cell reference
     private static boolean isCellReference(String value) {
         return value.matches("[A-Z]+\\d+");
     }
 
+    // Check if the value is a function (like SUMA, MIN, etc.)
     private static boolean isFunction(String value) {
-        return value.matches("SUMA|MIN|MAX|PROMEDIO|/|%|\\+|\\-");
-
+        return value.matches("SUMA|MIN|MAX|PROMEDIO|\\+|\\-|\\*|\\/|%");
     }
 
+    // Check if the value is an operator (e.g., +, -, *, /)
     public static FormulaNode buildFormulaTree(String formula) {
         // Remove the leading '=' symbol
         formula = formula.substring(1);

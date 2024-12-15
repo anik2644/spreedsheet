@@ -30,4 +30,5 @@ public class Main {
     }
 }
 ///     =SUMA(A1;SUMA(B1:C2);suma(5 ,A2),min(a1:a3))
+// =(SUMA(B1:C2) * SUMA(A1;SUMA(B1:C2);suma(5 ,A2),min(a1:a3)))
 //  =SUMA(B1:C2)

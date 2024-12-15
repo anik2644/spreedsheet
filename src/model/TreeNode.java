@@ -23,7 +23,14 @@ public class TreeNode {
         toStringHelper(this, sb, 0);
         return sb.toString();
     }
+    public String getValue() {
+        return value;
+    }
 
+    // Getter for the node's children
+    public List<TreeNode> getChildren() {
+        return children;
+    }
     private void toStringHelper(TreeNode node, StringBuilder sb, int depth) {
         for (int i = 0; i < depth; i++) sb.append("  ");
         sb.append(node.value).append("\n");
