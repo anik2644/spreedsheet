@@ -155,17 +155,17 @@ public class Menu {
         }
     }
 
-    public void visitTree(TreeNode node,String coordinate) {
-        if (node == null) return;
+    public String visitTree(TreeNode node, String coordinate) {
+        if (node == null) return null;
 
         // Base case: If the node has no children, it's a leaf or operand
         if (node.children.isEmpty()) {
-            return; // Leaf nodes are part of formulas; no replacement here
+            return node.value; // Return the value of the leaf node
         }
 
         // Recursive case: Visit children first to process deeper levels
         for (TreeNode child : node.children) {
-            visitTree(child,coordinate);
+            visitTree(child, coordinate);
         }
 
         // Process the current node after its children (post-order traversal)
@@ -182,17 +182,25 @@ public class Menu {
             // Print the most independent formula
             System.out.println("Formula: " + formula);
 
+            // Create formula content and update the spreadsheet
             FormulaContent formulaContent = new FormulaContent(formula.toString());
-            spreadsheet.addOrModifyCell(coordinate,formulaContent);
+            spreadsheet.addOrModifyCell(coordinate, formulaContent);
 
+            // Retrieve the calculated value from the spreadsheet
             Cell cell = spreadsheet.getCell(coordinate);
-            String value = (cell != null) ? cell.getValueAsString() : "Cell A4 is empty";
-            System.out.println("Value of: "+coordinate+"  : " + value);
+            String value = (cell != null) ? cell.getValueAsString() : "Cell is empty";
+            System.out.println("Value of: " + coordinate + "  : " + value);
 
-            // Replace this formula with a constant (e.g., 5)
+            // Replace this formula with the calculated value
             node.value = value;
             node.children.clear(); // Clear children to make this node a leaf
+
+            // Return the calculated value
+            return value;
         }
+
+        // If the node is not a function, return its value
+        return node.value;
     }
 
 
@@ -343,7 +351,17 @@ public class Menu {
 
                 TreeNode root = parseFormula(contentInput);
                 System.out.println(root);
-                visitTree(root,coordinate);
+
+
+                String result = visitTree(root, coordinate);
+                System.out.println("Final Value: " + result);
+
+
+                TextContent formu = new TextContent(result);
+                spreadsheet.addOrModifyCell(coordinate,formu );
+                System.out.println("Cell " + coordinate + " updated successfully.");
+                return;
+                //contentInput = result;
 
 //                String formula = "=MAX(A1;SUMA(B1;C2);5)";
 
