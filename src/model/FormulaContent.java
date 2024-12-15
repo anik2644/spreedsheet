@@ -190,7 +190,7 @@ public class FormulaContent implements Content {
         String arguments = token.substring(start, end);
 
         List<Double> values = getValuesFromArguments(arguments, cells);
-     //   System.out.println("Values for function " + token + ": " + values);
+        //   System.out.println("Values for function " + token + ": " + values);
         //System.out.println("Anik Evaluating function token: " + token);
 
 

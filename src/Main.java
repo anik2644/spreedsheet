@@ -29,3 +29,5 @@ public class Main {
         System.out.println("Menu displayed successfully. Program execution complete.");
     }
 }
+///     =MAX(A1;SUMA(B1;C2);5)
+//  =SUMA(B1:C2)
