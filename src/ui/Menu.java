@@ -378,7 +378,7 @@ public class Menu {
 
         String value;
         int operatorIndex = findOperatorIndex(formula);
-        System.out.println("Operator Index: " + operatorIndex);
+       // System.out.println("Operator Index: " + operatorIndex);
 
         // Split the formula if an operator is found
         if (operatorIndex != -1) {
@@ -400,14 +400,14 @@ public class Menu {
 
             }
 
-            System.out.println("First part: " + part1);
-           System.out.println("Second part: " + part2);
+           // System.out.println("First part: " + part1);
+          // System.out.println("Second part: " + part2);
 
 
 
 
             finalString = finalString + value + " "+ formula.charAt(operatorIndex) + " ";;
-            System.out.println("cur fin " + finalString);
+           // System.out.println("cur fin " + finalString);
 
             finalString = finalString + complexFormula("",part2,coordinate);
 
@@ -426,7 +426,7 @@ public class Menu {
             }
 
             finalString = finalString +" "+ value ;
-            System.out.println("cur fin " + finalString);
+          //  System.out.println("cur fin " + finalString);
 
 
         }
